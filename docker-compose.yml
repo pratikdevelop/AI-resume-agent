@@ -1,0 +1,136 @@
+# docker-compose.yml
+# Starts all 6 services with: docker-compose up --build
+#
+# Services:
+#   orchestrator  - port 8000 (main entry point + dashboard)
+#   resume        - port 8001 (PDF + llama3.2 parsing)
+#   matching      - port 8002 (skill scoring)
+#   decision      - port 8003 (hire/reject logic)
+#   email         - port 8004 (Gmail SMTP)
+#   scheduler     - port 8005 (Google Calendar + Jitsi)
+
+version: "3.9"
+
+networks:
+  a2a_network:
+    driver: bridge
+
+services:
+
+  # ── Agent 1: Resume Parser ──────────────────────────────
+  resume:
+    build: .
+    container_name: a2a_resume
+    command: uvicorn agents.resume_agent:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      - DOCKER_MODEL_URL=http://host.docker.internal:12434
+      - DOCKER_MODEL=ai/llama3.2
+    networks:
+      - a2a_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Agent 2: Matching Agent ─────────────────────────────
+  matching:
+    build: .
+    container_name: a2a_matching
+    command: uvicorn agents.matching_agent:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+    env_file: .env
+    networks:
+      - a2a_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Agent 3: Decision Agent ─────────────────────────────
+  decision:
+    build: .
+    container_name: a2a_decision
+    command: uvicorn agents.decision_agent:app --host 0.0.0.0 --port 8003
+    ports:
+      - "8003:8003"
+    env_file: .env
+    networks:
+      - a2a_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Agent 4: Email Agent ────────────────────────────────
+  email:
+    build: .
+    container_name: a2a_email
+    command: uvicorn agents.email_agent:app --host 0.0.0.0 --port 8004
+    ports:
+      - "8004:8004"
+    env_file: .env
+    networks:
+      - a2a_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Agent 5: Scheduler Agent ────────────────────────────
+  scheduler:
+    build: .
+    container_name: a2a_scheduler
+    command: uvicorn agents.scheduler_agent:app --host 0.0.0.0 --port 8005
+    ports:
+      - "8005:8005"
+    env_file: .env
+    volumes:
+      - ./credentials.json:/app/credentials.json:ro
+    networks:
+      - a2a_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Orchestrator ────────────────────────────────────────
+  orchestrator:
+    build: .
+    container_name: a2a_orchestrator
+    command: uvicorn orchestrator:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      # Inside Docker, agents are reached by container name not localhost
+      - RESUME_URL=http://resume:8001
+      - MATCHING_URL=http://matching:8002
+      - DECISION_URL=http://decision:8003
+      - EMAIL_URL=http://email:8004
+      - SCHEDULER_URL=http://scheduler:8005
+      # Ollama/Docker Model Runner runs on the HOST machine, not inside Docker
+      - DOCKER_MODEL_URL=http://host.docker.internal:12434
+      - OLLAMA_URL=http://host.docker.internal:12434
+    depends_on:
+      - resume
+      - matching
+      - decision
+      - email
+      - scheduler
+    networks:
+      - a2a_network
+    restart: unless-stopped

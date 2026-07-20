@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TechCorp Hiring — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#080c14;--surface:#0d1422;--border:#1a2540;--accent:#00e5ff;--green:#00ff87;--red:#ff3d6e;--text:#e8f0ff;--muted:#4a5a7a;--font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+
+    .glow{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.06) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+
+    .card{position:relative;z-index:1;width:100%;max-width:440px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+    .logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:14px;font-weight:800;color:var(--bg);font-family:var(--mono)}
+    .logo-text{font-size:18px;font-weight:800}
+    .logo-sub{font-family:var(--mono);font-size:10px;color:var(--muted)}
+
+    .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);padding:4px;border-radius:10px;border:1px solid var(--border);margin-bottom:28px}
+    .tab{padding:10px;text-align:center;font-size:13px;font-weight:700;border-radius:7px;cursor:pointer;transition:all .2s;color:var(--muted)}
+    .tab.active{background:var(--accent);color:var(--bg)}
+
+    .form{display:none;flex-direction:column;gap:14px}
+    .form.active{display:flex}
+
+    .field label{display:block;font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:5px;letter-spacing:.05em}
+    .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border-color .2s}
+    .field input:focus{border-color:var(--accent)}
+    .field input.error{border-color:var(--red)}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .btn{width:100%;padding:13px;background:var(--accent);color:var(--bg);border:none;border-radius:10px;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;margin-top:4px}
+    .btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,229,255,.3)}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .spinner{display:none;width:16px;height:16px;border:2px solid var(--bg);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11px;font-family:var(--mono)}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    .error-msg{background:rgba(255,61,110,.1);border:1px solid rgba(255,61,110,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);font-family:var(--mono);display:none}
+    .error-msg.show{display:block}
+
+    .hint{font-size:11px;color:var(--muted);font-family:var(--mono);text-align:center;margin-top:4px}
+  </style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">A2A</div>
+    <div>
+      <div class="logo-text">TechCorp Hiring</div>
+      <div class="logo-sub">AGENT-TO-AGENT PIPELINE</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('login')">Login</div>
+    <div class="tab" onclick="switchTab('register')">Register</div>
+  </div>
+
+  <!-- Login Form -->
+  <div class="form active" id="loginForm">
+    <div class="error-msg" id="loginError"></div>
+    <div class="field"><label>Work Email</label><input type="email" id="lEmail" placeholder="hr@company.com"/></div>
+    <div class="field"><label>Password</label><input type="password" id="lPassword" placeholder="••••••••"/></div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">
+      <span id="loginBtnText">Login →</span>
+      <div class="spinner" id="loginSpinner"></div>
+    </button>
+    <div class="hint">Don't have an account? Click Register above</div>
+  </div>
+
+  <!-- Register Form -->
+  <div class="form" id="registerForm">
+    <div class="error-msg" id="registerError"></div>
+    <div class="field"><label>Company Name *</label><input type="text" id="rCompany" placeholder="Acme Corp"/></div>
+    <div class="field-row">
+      <div class="field"><label>Industry</label><input type="text" id="rIndustry" placeholder="Technology"/></div>
+      <div class="field"><label>Website</label><input type="text" id="rWebsite" placeholder="acme.com"/></div>
+    </div>
+    <div class="divider">HR Account</div>
+    <div class="field"><label>Work Email *</label><input type="email" id="rEmail" placeholder="hr@acme.com"/></div>
+    <div class="field"><label>Password *</label><input type="password" id="rPassword" placeholder="Min 8 characters"/></div>
+    <div class="field"><label>Confirm Password *</label><input type="password" id="rConfirm" placeholder="Repeat password"/></div>
+    <button class="btn" id="registerBtn" onclick="doRegister()">
+      <span id="registerBtnText">Create Workspace →</span>
+      <div class="spinner" id="registerSpinner"></div>
+    </button>
+    <div class="hint">Already registered? Click Login above</div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('loginForm').classList.toggle('active', tab==='login');
+  document.getElementById('registerForm').classList.toggle('active', tab==='register');
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('registerError').classList.remove('show');
+}
+
+function setLoading(type, loading) {
+  document.getElementById(type+'Btn').disabled = loading;
+  document.getElementById(type+'BtnText').style.display = loading ? 'none' : 'block';
+  document.getElementById(type+'Spinner').style.display = loading ? 'block' : 'none';
+}
+
+function showError(type, msg) {
+  const el = document.getElementById(type+'Error');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('show');
+}
+
+function saveSession(data) {
+  localStorage.setItem('a2a_token',        data.access_token);
+  localStorage.setItem('a2a_company_id',   data.company_id);
+  localStorage.setItem('a2a_company_name', data.company_name);
+  localStorage.setItem('a2a_email',        data.email);
+}
+
+async function doLogin() {
+  const email    = document.getElementById('lEmail').value.trim();
+  const password = document.getElementById('lPassword').value;
+  if (!email || !password) return showError('login', 'Email and password are required');
+
+  setLoading('login', true);
+  try {
+    const res  = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (!res.ok) return showError('login', data.detail || 'Login failed');
+    saveSession(data);
+    window.location.href = '/app';
+  } catch(e) {
+    showError('login', 'Cannot reach server. Is the API running?');
+  } finally {
+    setLoading('login', false);
+  }
+}
+
+async function doRegister() {
+  const company  = document.getElementById('rCompany').value.trim();
+  const email    = document.getElementById('rEmail').value.trim();
+  const password = document.getElementById('rPassword').value;
+  const confirm  = document.getElementById('rConfirm').value;
+  const industry = document.getElementById('rIndustry').value.trim();
+  const website  = document.getElementById('rWebsite').value.trim();
+
+  if (!company)  return showError('register', 'Company name is required');
+  if (!email)    return showError('register', 'Email is required');
+  if (password.length < 8) return showError('register', 'Password must be at least 8 characters');
+  if (password !== confirm) return showError('register', 'Passwords do not match');
+
+  setLoading('register', true);
+  try {
+    const res  = await fetch(`${API}/auth/register`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({company_name: company, email, password, industry, website})
+    });
+    const data = await res.json();
+    if (!res.ok) return showError('register', data.detail || 'Registration failed');
+    saveSession(data);
+    window.location.href = '/app';
+  } catch(e) {
+    showError('register', 'Cannot reach server. Is the API running?');
+  } finally {
+    setLoading('register', false);
+  }
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('loginForm').classList.contains('active')) doLogin();
+  else doRegister();
+});
+
+// Redirect if already logged in
+if (localStorage.getItem('a2a_token')) {
+  window.location.href = '/app';
+}
+</script>
+</body>
+</html>
